@@ -1,1 +1,2 @@
-# Joc-Refranys-El-Lado-Oscuro-
+Joc de Refranys 
+Equip: El Lado Oscuro
