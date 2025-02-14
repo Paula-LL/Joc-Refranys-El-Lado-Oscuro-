@@ -48,6 +48,12 @@ class SignificatRefrany {
     public int nrOrdreAleatori;
 }
 
+class Usuari {
+
+    public int errorsUsuari;
+    public int encertsUsuari;
+}
+
 public class ProjecteRefranys {
 
     //------------SCANNER GLOBAL-----------------
@@ -167,7 +173,7 @@ public class ProjecteRefranys {
         int errors = 0;
         int encerts = 0;
         long tempsInicial;
-        boolean continuar;
+        boolean continuar = true;
 
         do {
             System.out.printf("\nObjectiu emparellar les dues meitats\n");
@@ -191,9 +197,16 @@ public class ProjecteRefranys {
             mostrarEncerts(encerts);
             tempsResultant(tempsInicial);
             //SEGON INTENT
-            contadorIntent++;
-            continuar = continuar(contadorIntent);
+
+            if (errors > 0 && contadorIntent < 2) {
+                continuar = continuar(contadorIntent);
+                contadorIntent++;
+            }
             if (contadorIntent >= 2) {
+                continuar = false;
+            }
+
+            if (encerts == 5) {
                 continuar = false;
             }
 
@@ -392,8 +405,8 @@ public class ProjecteRefranys {
             }
         }
     }
-    
-    public static void mostrarSignificats2(ArrayList<RefranyComplet> refranys, ArrayList<SignificatRefrany> significats) {
+
+    public static void mostrarFase2(ArrayList<RefranyComplet> refranys, ArrayList<SignificatRefrany> significats) {
         int aux;
         int aux2;
 
@@ -401,52 +414,55 @@ public class ProjecteRefranys {
         for (int i = 0; i < NR_REFRANYS_MOSTRATS; i++) {
             aux = refranys.get(i).nrOrdreAleatori;
             aux2 = significats.get(i).nrOrdreAleatori;
-            System.out.printf("%75s -%2d |-%2d %s \n", refranys.get(aux).refComplet, i,i, significats.get(aux2).significatRef);
+            System.out.printf("%75s -%2d | %2d - %s \n", refranys.get(aux).refComplet, i, i, significats.get(aux2).significatRef);
         }
     }
-    public static void mostrarJugadesFase2 (ArrayList<RefranyComplet> refranys, ArrayList<SignificatRefrany> significats) {
-        int contadorIntent = 0; 
-        int respostaRefrany, respostaSignificat;
-        int errors = 0; 
-        int encerts = 0; 
+
+    public static void demanarJugadesFase2(ArrayList<RefranyComplet> refranys, ArrayList<SignificatRefrany> significats) {
+        int contadorIntent = 0;
+        int respostaRefrany, respostaSignificat, posicioCorrectaFase2;
+        int errors = 0;
+        int encerts = 0;
         long tempsInicial;
         boolean continuar = true;
 
         do {
-            tempsInicial = tempsInicial();
             System.out.printf("Objectiu: relacionar refrany amb significat:\n");
-            respostaRefrany = preguntarRefrany();
-            respostaSignificat = preguntarSignificat();
+            mostrarFase2(refranys, significats);
+            tempsInicial = tempsInicial();
+            for (int k = 0; k < NR_REFRANYS_MOSTRATS; k++) {
+                respostaRefrany = preguntarRefrany();
+                respostaSignificat = preguntarSignificat();
+                int ordreAleatoriRefranyPrimeraM = refranys.get(respostaRefrany).nrOrdreAleatori;
+                //RELACIONA ELS REFRANYS AMB ELS SIGNIFICATS
+                posicioCorrectaFase2 = emparellarRefranysFase2(ordreAleatoriRefranyPrimeraM, significats);
+                encerts = contarEncertsFase2(encerts, posicioCorrectaFase2, respostaSignificat);
+                errors = contarErrorsFase2(errors, posicioCorrectaFase2, respostaSignificat);
+            }
 
-            int ordreAleatoriRefrany = refranys.get(respostaRefrany).nrOrdreAleatori;
-            int posicioCorrecta = -1;
-            int i = 0; 
-
-            while(i < significats.size() && posicioCorrecta == -1){
-                if (significats.get(i).nrOrdreAleatori == ordreAleatoriRefrany) {
-                    posicioCorrecta = i;
-                }
-                i++;
-            }
-            if (respostaSignificat == posicioCorrecta){
-                encerts++;
-            }
-            else {
-                errors++;
-            }
-            mostrarErrors(errors);
-            mostrarEncerts(encerts);
+            mostrarErrorsFase2(errors);
+            mostrarEncertsFase2(encerts);
             tempsResultant(tempsInicial);
-            if (contadorIntent >= 2){
+            //SEGON INTENT      
+            if (errors > 0 && contadorIntent < 2) {
+                continuar = continuarFase2(contadorIntent);
+                contadorIntent++;
+            }
+            if (contadorIntent >= 2) {
                 continuar = false;
             }
-        } while((continuar==true));
+            if (encerts == 5) {
+                continuar = false;
+            }
+        } while ((continuar == true));
+
     }
-    public static int preguntarRefrany(){
+
+    public static int preguntarRefrany() {
         int respostaRefrany;
         System.out.print("\nIntrodueix el refrany: ");
         respostaRefrany = input.nextInt();
-        while(respostaRefrany < 0 || respostaRefrany > 4){
+        while (respostaRefrany < 0 || respostaRefrany > 4) {
             System.out.print("\nFora de rang \n");
             System.out.print("\nIntrodueix el refrany: \n");
             respostaRefrany = input.nextInt();
@@ -458,15 +474,215 @@ public class ProjecteRefranys {
         int respostaSignificat;
         System.out.printf("\nIntrodueix el significat: ");
         respostaSignificat = input.nextInt();
-        while(respostaSignificat < 0 || respostaSignificat > 4){
+        while (respostaSignificat < 0 || respostaSignificat > 4) {
             System.out.print("\nFora de rang \n");
             System.out.print("\nIntrodueix el refrany: \n");
             respostaSignificat = input.nextInt();
         }
         return respostaSignificat;
     }
-    public static void main(String[] args) {
 
+    public static int emparellarRefranysFase2(int ordreAleatoriRefranyPrimeraM, ArrayList<SignificatRefrany> significats) {
+        int posicioCorrecta = -1;
+        int i = 0;
+
+        while (i < significats.size() && posicioCorrecta == -1) {
+            if (significats.get(i).nrOrdreAleatori == ordreAleatoriRefranyPrimeraM) {
+                posicioCorrecta = i;
+            }
+            i++;
+        }
+        return posicioCorrecta;
+    }
+
+    public static int contarErrorsFase2(int errors, int posicioCorrecta, int respostaSignificat) {
+        if (respostaSignificat != posicioCorrecta) {
+            errors++;
+        }
+        return errors;
+    }
+
+    public static int contarEncertsFase2(int encerts, int posicioCorrecta, int respostaSignificat2) {
+        if (respostaSignificat2 == posicioCorrecta) {
+            encerts++;
+        }
+        return encerts;
+    }
+
+    public static void mostrarEncertsFase2(int encerts) {
+        System.out.printf("\nEl numero total d'encerts: %d\n", encerts);
+    }
+
+    public static void mostrarErrorsFase2(int errors) {
+        System.out.printf("\nEl numero total d'errors: %d\n", errors);
+    }
+
+    // PERMET A L'USUARI CONTINUAR
+    public static boolean continuarFase2(int contadorIntent) {
+        boolean continuar = false;
+        char lletra;
+        if (contadorIntent < 2) {
+            System.out.printf("\nSi vols tornar a intentar, introdueix \"s\" sino introdueix \"n\": ");
+            lletra = input.next().charAt(0);
+            if (lletra == 's') {
+                continuar = true;
+            }
+            while (lletra != 's' && lletra != 'n') {
+                System.out.printf("\nSi vols tornar a intentar, introdueix \"s\" sino introdueix \"n\": ");
+                lletra = input.next().charAt(0);
+            }
+        }
+        return continuar;
+    }
+
+    public static int preguntarModeJoc() {
+        System.out.println("Disposes de dos modes de joc: ");
+        System.out.println("1.SinglePlayer");
+        System.out.println("2.MultiPlayer");
+        System.out.print("Introdueix 1 o 2: ");
+        int modeJoc = input.nextInt();
+        while (modeJoc != 1 && modeJoc != 2) {
+            System.out.println("Fora de rang");
+            System.out.println("Disposes de dos modes de joc: ");
+            System.out.println("1.SinglePlayer");
+            System.out.println("2.MultiPlayer");
+            System.out.print("Introdueix 1 o 2: ");
+            modeJoc = input.nextInt();
+        }
+        return modeJoc;
+
+    }
+
+    //---------------MULTIPLAYER JUGADOR1----------------
+    //PRIMERA FASE
+    public static void demanarJugadesPrimerJugador(ArrayList<PrimeraMeitat> primers, ArrayList<SegonaMeitat> segons, Usuari usuari) {
+        int respostaMeitat1, respostaMeitat2, posicioCorrecta;
+        int errors = 0;
+        int encerts = 0;
+        long tempsInicial;
+
+        System.out.printf("\nObjectiu emparellar les dues meitats\n");
+        tempsInicial = tempsInicial();
+        //MOSTRAR LES DUES MEITATS JA AMB L'ORDRE ALEATORI
+        mostrarMeitats(primers, segons);
+        for (int k = 0; k < NR_REFRANYS_MOSTRATS; k++) {
+            respostaMeitat1 = preguntarMeitat1();
+            respostaMeitat2 = preguntarMeitat2();
+            /*GUARDEM EN LA VARIABLE EL NUM ALEATORI QUE TÉ L'INDEX QUE HA SELECCIONAT L'USUARI
+                EN LA PRIMERA respostaMeitat1*/
+            int ordreAleatoriPrimeraM = primers.get(respostaMeitat1).nrOrdreAleatori;
+            //MÈTODE PER EMPARELLAR
+            posicioCorrecta = emparellarRefranys(ordreAleatoriPrimeraM, segons);
+            encerts = contarEncerts(encerts, posicioCorrecta, respostaMeitat2);
+            errors = contarErrors(errors, posicioCorrecta, respostaMeitat2);
+        }
+        //AFEGIR ERRORS
+        usuari.errorsUsuari+=errors;
+        usuari.encertsUsuari+=encerts;
+        //MOSTRAR RESULTATS ERRORS, ENCERTS I TEMPS
+        mostrarErrors(errors);
+        mostrarEncerts(encerts);
+        tempsResultant(tempsInicial);
+    }
+
+    //SEGONA FASE
+    public static void demanarJugadesPrimerJugadorF2(ArrayList<RefranyComplet> refranys, ArrayList<SignificatRefrany> significats, Usuari usuari) {
+        int respostaRefrany, respostaSignificat, posicioCorrectaFase2;
+        int errorsSFase2 = 0; //HA DE SER DIFERENT PER PODER GUARDAR ELS ALTRES ERRORS, SINO SOBREESCRIU ELS DE LA PRIMERA FASE
+        int encertsSFase2 = 0;
+        long tempsInicial;
+
+        System.out.printf("Objectiu: relacionar refrany amb significat:\n");
+        mostrarFase2(refranys, significats);
+        tempsInicial = tempsInicial();
+        for (int k = 0; k < NR_REFRANYS_MOSTRATS; k++) {
+            respostaRefrany = preguntarRefrany();
+            respostaSignificat = preguntarSignificat();
+            int ordreAleatoriRefranyPrimeraM = refranys.get(respostaRefrany).nrOrdreAleatori;
+            //RELACIONA ELS REFRANYS AMB ELS SIGNIFICATS
+            posicioCorrectaFase2 = emparellarRefranysFase2(ordreAleatoriRefranyPrimeraM, significats);
+            encertsSFase2 = contarEncertsFase2(encertsSFase2, posicioCorrectaFase2, respostaSignificat);
+            errorsSFase2 = contarErrorsFase2(errorsSFase2, posicioCorrectaFase2, respostaSignificat);
+        }
+        //AFEGIR ERRORS
+        usuari.errorsUsuari+=errorsSFase2;
+        //AFEGIR ENCERTS
+        usuari.encertsUsuari+=encertsSFase2;
+        mostrarErrorsFase2(usuari.errorsUsuari);
+        mostrarEncertsFase2(usuari.encertsUsuari);
+        tempsResultant(tempsInicial);
+    }
+    //----------MULTIPLAYER JUGADOR2--------------
+    //PRIMERA FASE
+    public static void demanarJugadesSegonJugador(ArrayList<PrimeraMeitat> primers, ArrayList<SegonaMeitat> segons, Usuari usuari) {
+        int respostaMeitat1, respostaMeitat2, posicioCorrecta;
+        int errors = 0;
+        int encerts = 0;
+        long tempsInicial;
+
+        System.out.printf("\nObjectiu emparellar les dues meitats\n");
+        tempsInicial = tempsInicial();
+        //MOSTRAR LES DUES MEITATS JA AMB L'ORDRE ALEATORI
+        mostrarMeitats(primers, segons);
+        for (int k = 0; k < NR_REFRANYS_MOSTRATS; k++) {
+            respostaMeitat1 = preguntarMeitat1();
+            respostaMeitat2 = preguntarMeitat2();
+            /*GUARDEM EN LA VARIABLE EL NUM ALEATORI QUE TÉ L'INDEX QUE HA SELECCIONAT L'USUARI
+                EN LA PRIMERA respostaMeitat1*/
+            int ordreAleatoriPrimeraM = primers.get(respostaMeitat1).nrOrdreAleatori;
+            //MÈTODE PER EMPARELLAR
+            posicioCorrecta = emparellarRefranys(ordreAleatoriPrimeraM, segons);
+            encerts = contarEncerts(encerts, posicioCorrecta, respostaMeitat2);
+            errors = contarErrors(errors, posicioCorrecta, respostaMeitat2);
+        }
+        //AFEGIR ERRORS
+        usuari.errorsUsuari+=errors;
+        usuari.encertsUsuari+=encerts;
+        //MOSTRAR RESULTATS ERRORS, ENCERTS I TEMPS
+        mostrarErrors(errors);
+        mostrarEncerts(encerts);
+        tempsResultant(tempsInicial);
+    }
+
+    //SEGONA FASE
+    public static void demanarJugadesSegonJugadorF2(ArrayList<RefranyComplet> refranys, ArrayList<SignificatRefrany> significats, Usuari usuari) {
+        int respostaRefrany, respostaSignificat, posicioCorrectaFase2;
+        int errorsSFase2 = 0; //HA DE SER DIFERENT PER PODER GUARDAR ELS ALTRES ERRORS, SINO SOBREESCRIU ELS DE LA PRIMERA FASE
+        int encertsSFase2 = 0;
+        long tempsInicial;
+
+        System.out.printf("Objectiu: relacionar refrany amb significat:\n");
+        mostrarFase2(refranys, significats);
+        tempsInicial = tempsInicial();
+        for (int k = 0; k < NR_REFRANYS_MOSTRATS; k++) {
+            respostaRefrany = preguntarRefrany();
+            respostaSignificat = preguntarSignificat();
+            int ordreAleatoriRefranyPrimeraM = refranys.get(respostaRefrany).nrOrdreAleatori;
+            //RELACIONA ELS REFRANYS AMB ELS SIGNIFICATS
+            posicioCorrectaFase2 = emparellarRefranysFase2(ordreAleatoriRefranyPrimeraM, significats);
+            encertsSFase2 = contarEncertsFase2(encertsSFase2, posicioCorrectaFase2, respostaSignificat);
+            errorsSFase2 = contarErrorsFase2(errorsSFase2, posicioCorrectaFase2, respostaSignificat);
+        }
+        //AFEGIR ERRORS
+        usuari.errorsUsuari+=errorsSFase2;
+        //AFEGIR ENCERTS
+        usuari.encertsUsuari+=encertsSFase2;
+        mostrarErrorsFase2(usuari.errorsUsuari);
+        mostrarEncertsFase2(usuari.encertsUsuari);
+        tempsResultant(tempsInicial);
+    }
+    
+    //DECIDIR GUANYADOR
+    public static void decidirGuanyador(Usuari usuari1, Usuari usuari2){
+        if(usuari1.errorsUsuari > usuari2.errorsUsuari){
+            System.out.println("Ha guanyat el segon usuari, enhorabona!!!");
+        }
+        else if(usuari1.errorsUsuari < usuari2.errorsUsuari){
+            System.out.println("Ha guanyat el primer usuari, enhorabona!!!");
+        }
+    }
+    public static void main(String[] args) {
+        //-----------ARRAYS---------------------------
         // PRIMERA ARRAYLIST
         ArrayList<PrimeraMeitat> primers = new ArrayList<>();
         // SEGONA ARRAYLIST
@@ -475,33 +691,72 @@ public class ProjecteRefranys {
         ArrayList<RefranyComplet> refranys = new ArrayList<>();
         //SEGONA FASE: SIGNIFICATS
         ArrayList<SignificatRefrany> significats = new ArrayList<>();
-        do {
-            /*
+        Usuari usuari1 = new Usuari();
+        Usuari usuari2 = new Usuari();
+        //TERCERA FASE
+        int modeJoc;
+        modeJoc = preguntarModeJoc();
+        //1.SINGLE-PLAYER
+        if (modeJoc == 1) {
+            do {
+                /*
         -------------------FASE1----------------------
         OMPLIR ELS REFRANYS AMB ID I ELS STRINGS
-             */
-            omplePrimeres(primers);
-            ompleSegones(segons);
-            /*
+                 */
+                omplePrimeres(primers);
+                ompleSegones(segons);
+                /*
         GENERAR ELS NUMEROS ALEATORIS DE LES DUES MEITAT
         PRIMERA MEITAT:
-             */
+                 */
+                ordrePrimeres(primers);
+                //SEGONA MEITAT:
+                ordreSegones(segons);
+                //DEMANAR EMPARELLAR
+                demanarJugades(primers, segons);
+            } while (nouJoc() == true);
+            //----------SEGONA FASE---------------------
+            if (anarFase2() == true) {
+                ompleRefranys(refranys);
+                ompleSignificats(significats);
+                ordreRefranys(refranys);
+                ordreSignificats(significats);
+                demanarJugadesFase2(refranys, significats);
+            }
+        } else if (modeJoc == 2) {
+            //MULTIPLAYER
+            //JUGADOR1
+            System.out.println("BENVOLGUT PRIMER JUGADOR!!");
+
+            System.out.println("PRIMERA FASE:");
+            omplePrimeres(primers);
+            ompleSegones(segons);
             ordrePrimeres(primers);
-            //SEGONA MEITAT:
             ordreSegones(segons);
-            //DEMANAR EMPARELLAR
-            demanarJugades(primers, segons);
-        } while (nouJoc() == true);
-        //----------SEGONA FASE---------------------
-        if (anarFase2() == true) {
+            demanarJugadesPrimerJugador(primers, segons, usuari1);
+            System.out.println("SEGONA FASE: ");
+
             ompleRefranys(refranys);
             ompleSignificats(significats);
             ordreRefranys(refranys);
             ordreSignificats(significats);
-            mostrarSignificats2(refranys, significats);
-            mostrarJugadesFase2(refranys,significats);
+            demanarJugadesPrimerJugadorF2(refranys, significats, usuari1);
+            
+            System.out.println("BENVOLGUT SEGON JUGADOR!!");
+            
+            System.out.println("PRIMERA FASE: ");
+            ordrePrimeres(primers);
+            ordreSegones(segons);
+            demanarJugadesSegonJugador(primers, segons, usuari2);
+            System.out.println("SEGONA FASE: ");
+            
+            ordreRefranys(refranys);
+            ordreSignificats(significats);
+            demanarJugadesSegonJugadorF2(refranys, significats, usuari2);
+            
+            decidirGuanyador(usuari1, usuari2);
+            
+            
         }
-
     }
-
 }
